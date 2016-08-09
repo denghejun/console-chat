@@ -1,0 +1,3 @@
+## Let us chat with console, you can send normal text message, image message ...
+
+<font color = 'red'>NOTE: it base on Nodejs</font>
