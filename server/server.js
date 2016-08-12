@@ -15,7 +15,8 @@ server.on('connection',socket => {
 
    socket.on('data',data => {
        clients.forEach((clientSocket,address) => {
-            clientSocket.write(`${clients.search(socket)} said: ${data}`)
+            // clientSocket.write(`${clients.search(socket)} said: ${data}\r\n`)
+            clientSocket.write(data);
        });
    });
 
