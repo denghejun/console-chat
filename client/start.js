@@ -1,37 +1,49 @@
 const net = require('net');
 const fs = require('fs');
+const leftPad = require('left-pad');
 const SERVER_PORT = 8080;
 const SERVER_HOST = 'localhost';
-var lineNumber = 0;
-
+var chunks;
+var bfType,bfLength;
 
 const client = net.createConnection(SERVER_PORT,SERVER_HOST).setNoDelay(true);
 client.on('connect',() => {
     process.stdout.write('connect server successfully, you can chat NOW!\n');
 });
 
-var buffer = new Buffer(0);
-var chunks = [];
-var count =0;
+
 client.on('data',data => {
   const dataBuffer =Buffer.from(data.buffer);
-  if(dataBuffer.slice(dataBuffer.length-4,dataBuffer.length).equals(Buffer.from('!EOF')))
+  chunks =chunks ? Buffer.concat([chunks, dataBuffer]) : dataBuffer;
+  if(!bfType && !bfLength)
   {
-    chunks.push(dataBuffer.slice(0,dataBuffer.length-4));
-    var stream1 = fs.createWriteStream('1.png');
-        stream1.write(new Buffer(Buffer.concat(chunks)));
+     bfType = dataBuffer.slice(0,6).toString().trim(); // 6 bytes for 'type'
+     bfLength = dataBuffer.slice(6,10).readUInt32BE(); // 4 bytes for 'data length'
+  }
+
+  if(chunks.length == bfLength + 6 + 4)
+  {
+    const bfInnerData = chunks.slice(10, chunks.length);
+   switch(bfType)
+   {
+     case 'text':
+        process.stdout.write(bfInnerData);
+        break;
+
+     case 'image':
+        var stream1 = fs.createWriteStream('1.png');
+        stream1.write(bfInnerData);
         stream1.end();
-        chunks=[];
-  }
-  else if(dataBuffer.slice(dataBuffer.length-4,dataBuffer.length).equals(Buffer.from('!EOS')))
-  {
-    chunks.push(dataBuffer.slice(0,dataBuffer.length-4));
-    process.stdout.write(Buffer.concat(chunks));
-    chunks=[];
-  }
-  else
-  {
-    chunks.push(data);
+        break;
+
+     default:
+        process.stdout.write('unknow message type.\r\n');
+        break;
+   }
+
+   chunks = undefined;
+   bfType = undefined;
+   bfLength = undefined;
   }
 });   
 
@@ -63,18 +75,21 @@ process.stdin.on('readable', () => {
         {
               fs.readFile(chunk, (err, data) => {
                   if (err) throw err;
-                  const dataBuffer = Buffer.from(data.buffer);
-                  const eofBuffer = Buffer.from('!EOF');
-                  client.write(Buffer.concat([dataBuffer,eofBuffer]));
+
+                  const bfType = Buffer.alloc(6,leftPad('image',6,''));
+                  const bfValue = Buffer.from(data.buffer);
+                  const bfLength = Buffer.alloc(4,0);
+                  bfLength.writeUInt32BE(bfValue.length);
+                  client.write(Buffer.concat([bfType,bfLength,bfValue]));
                });
         }
         else
         {
-          var textData = 
-          {
-            
-          };
-            client.write(chunk+'\r\n!EOS');
+            const bfType = Buffer.alloc(6,leftPad('text',6,''));
+            const bfValue = Buffer.from(chunk+'\r\n');
+            const bfLength = Buffer.alloc(4,0);
+            bfLength.writeUInt32BE(bfValue.length);
+            client.write(Buffer.concat([bfType,bfLength,bfValue]));
         }
     });
 
