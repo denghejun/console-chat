@@ -48,10 +48,10 @@ client.on('data',data => {
         imageStream.write(bfInnerData);
         imageStream.end();
         setTimeout(function() {
-           imaging.draw('temp/any', { width: 25}, function (resp, status) {
+           imaging.draw('temp/any', { width: 15}, function (resp, status) {
              console.log(resp);
             });
-        }, 1000);
+        }, 100);
 
         break;
 
@@ -84,13 +84,13 @@ process.stdin.on('readable', () => {
     let chunk = process.stdin.read();
     if (chunk !== null&&chunk!=='\n'&&chunk!=='\r\n') 
     {
-      chunk = chunk.toString().replace('\r\n','');
+      chunk = chunk.toString().replace(/\r\n/g,'').replace(/"/g,'');
       if(client.destroyed)
       {
         client.connect({port:SERVER_PORT, host:SERVER_HOST});
       }
 
-      fs.exists(`${chunk}`, (exists) => {
+      fs.exists(chunk, (exists) => {
         const sender = Buffer.alloc(30, leftPad(client.address()['address'] + ':' +client.address()['port'].toString(),30,''));
         if(exists)
         {
