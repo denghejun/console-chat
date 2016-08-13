@@ -3,14 +3,14 @@ const fs = require('fs');
 const leftPad = require('left-pad');
 const SERVER_PORT = 8080;
 const SERVER_HOST = 'localhost';
-var chunks;
-var bfType,bfLength;
+let chunks;
+let bfType;
+let bfLength;
 
 const client = net.createConnection(SERVER_PORT,SERVER_HOST).setNoDelay(true);
 client.on('connect',() => {
     process.stdout.write('connect server successfully, you can chat NOW!\n');
 });
-
 
 client.on('data',data => {
   const dataBuffer =Buffer.from(data.buffer);
@@ -31,7 +31,7 @@ client.on('data',data => {
         break;
 
      case 'image':
-        var stream1 = fs.createWriteStream('1.png');
+        let stream1 = fs.createWriteStream('1.png');
         stream1.write(bfInnerData);
         stream1.end();
         break;
@@ -61,7 +61,7 @@ client.on('error',err => {
 
 process.stdin.setEncoding('utf8');
 process.stdin.on('readable', () => {
-    var chunk = process.stdin.read();
+    let chunk = process.stdin.read();
     if (chunk !== null&&chunk!=='\n'&&chunk!=='\r\n') 
     {
       chunk = chunk.toString().replace('\r\n','');
