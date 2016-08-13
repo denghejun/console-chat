@@ -1,6 +1,8 @@
 const net = require('net');
 const fs = require('fs');
 const leftPad = require('left-pad');
+const colors = require('colors');
+var imaging = require('imaging');
 const SERVER_PORT = 8080;
 const SERVER_HOST = 'localhost';
 let chunks;
@@ -10,7 +12,7 @@ let sender;
 
 const client = net.createConnection(SERVER_PORT,SERVER_HOST).setNoDelay(true);
 client.on('connect',() => {
-    process.stdout.write('connect server successfully, you can chat NOW!\n');
+    process.stdout.write('connect server successfully, you can chat NOW!\n'.green);
 });
 
 client.on('data',data => {
@@ -31,14 +33,26 @@ client.on('data',data => {
    switch(bfType)
    {
      case 'text':
-        process.stdout.write(Buffer.concat([bfSenderPrefix,bfInnerData,bfEnding]));
+        process.stdout.write(bfSenderPrefix.toString().rainbow);
+        process.stdout.write(Buffer.concat([bfInnerData,bfEnding]));
         break;
 
      case 'image':
-        process.stdout.write(Buffer.concat([bfSenderPrefix,bfEnding]));
-        let stream1 = fs.createWriteStream('1.png');
-        stream1.write(bfInnerData);
-        stream1.end();
+        if (!fs.existsSync('temp')){
+          fs.mkdirSync('temp');
+        }
+
+        process.stdout.write(bfSenderPrefix.toString().rainbow);
+        process.stdout.write(Buffer.concat([bfEnding]));
+        let imageStream = fs.createWriteStream('temp/any');
+        imageStream.write(bfInnerData);
+        imageStream.end();
+        setTimeout(function() {
+           imaging.draw('temp/any', { width: 25}, function (resp, status) {
+             console.log(resp);
+            });
+        }, 1000);
+
         break;
 
      default:
