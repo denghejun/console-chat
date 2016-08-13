@@ -33,7 +33,7 @@ client.on('data',data => {
    switch(bfType)
    {
      case 'text':
-        process.stdout.write(bfSenderPrefix.toString().rainbow);
+        process.stdout.write(bfSenderPrefix.toString().red);
         process.stdout.write(Buffer.concat([bfInnerData,bfEnding]));
         break;
 
@@ -43,16 +43,16 @@ client.on('data',data => {
         }
 
         process.stdout.write(bfSenderPrefix.toString().rainbow);
-        process.stdout.write(Buffer.concat([bfEnding]));
         let imageStream = fs.createWriteStream('temp/any');
         imageStream.write(bfInnerData);
         imageStream.end();
         setTimeout(function() {
            imaging.draw('temp/any', { width: 15}, function (resp, status) {
-             console.log(resp);
+             process.stdout.write(resp);
             });
         }, 100);
 
+        process.stdout.write(Buffer.concat([bfEnding]));
         break;
 
      default:
