@@ -6,6 +6,7 @@ const SERVER_HOST = 'localhost';
 let chunks;
 let bfType;
 let bfLength;
+let sender;
 
 const client = net.createConnection(SERVER_PORT,SERVER_HOST).setNoDelay(true);
 client.on('connect',() => {
@@ -15,22 +16,26 @@ client.on('connect',() => {
 client.on('data',data => {
   const dataBuffer =Buffer.from(data.buffer);
   chunks =chunks ? Buffer.concat([chunks, dataBuffer]) : dataBuffer;
-  if(!bfType && !bfLength)
+  if(!bfType && !bfLength && !sender)
   {
-     bfType = dataBuffer.slice(0,6).toString().trim(); // 6 bytes for 'type'
-     bfLength = dataBuffer.slice(6,10).readUInt32BE(); // 4 bytes for 'data length'
+     sender = dataBuffer.slice(0,30).toString().trim(); // 30 bytes for 'sender'
+     bfType = dataBuffer.slice(30,36).toString().trim(); // 6 bytes for 'type'
+     bfLength = dataBuffer.slice(36,40).readUInt32BE(); // 4 bytes for 'data length'
   }
 
-  if(chunks.length == bfLength + 6 + 4)
+  if(chunks.length == bfLength + 30 + 6 + 4)
   {
-    const bfInnerData = chunks.slice(10, chunks.length);
+   const bfInnerData = chunks.slice(40, chunks.length);
+   const bfSenderPrefix = Buffer.from('@'+sender + ' said>>');
+   const bfEnding = Buffer.from('\r\n');
    switch(bfType)
    {
      case 'text':
-        process.stdout.write(bfInnerData);
+        process.stdout.write(Buffer.concat([bfSenderPrefix,bfInnerData,bfEnding]));
         break;
 
      case 'image':
+        process.stdout.write(Buffer.concat([bfSenderPrefix,bfEnding]));
         let stream1 = fs.createWriteStream('1.png');
         stream1.write(bfInnerData);
         stream1.end();
@@ -44,6 +49,7 @@ client.on('data',data => {
    chunks = undefined;
    bfType = undefined;
    bfLength = undefined;
+   sender = undefined;
   }
 });   
 
@@ -71,6 +77,7 @@ process.stdin.on('readable', () => {
       }
 
       fs.exists(`${chunk}`, (exists) => {
+        const sender = Buffer.alloc(30, leftPad(client.address()['address'] + ':' +client.address()['port'].toString(),30,''));
         if(exists)
         {
               fs.readFile(chunk, (err, data) => {
@@ -80,16 +87,16 @@ process.stdin.on('readable', () => {
                   const bfValue = Buffer.from(data.buffer);
                   const bfLength = Buffer.alloc(4,0);
                   bfLength.writeUInt32BE(bfValue.length);
-                  client.write(Buffer.concat([bfType,bfLength,bfValue]));
+                  client.write(Buffer.concat([sender,bfType,bfLength,bfValue]));
                });
         }
         else
         {
             const bfType = Buffer.alloc(6,leftPad('text',6,''));
-            const bfValue = Buffer.from(chunk+'\r\n');
+            const bfValue = Buffer.from(chunk);
             const bfLength = Buffer.alloc(4,0);
             bfLength.writeUInt32BE(bfValue.length);
-            client.write(Buffer.concat([bfType,bfLength,bfValue]));
+            client.write(Buffer.concat([sender,bfType,bfLength,bfValue]));
         }
     });
 

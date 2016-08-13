@@ -1,6 +1,7 @@
 const cp = require('child_process');
 const net = require('net');
 var hashMap = require('hashmap').HashMap;
+const leftPad = require('left-pad');
 
 const server = net.createServer();
 const SERVER_PORT = 8080;
@@ -15,8 +16,7 @@ server.on('connection',socket => {
 
    socket.on('data',data => {
        clients.forEach((clientSocket,address) => {
-            // clientSocket.write(`${clients.search(socket)} said: ${data}\r\n`)
-            clientSocket.write(data);
+           clientSocket.write(data);
        });
    });
 
