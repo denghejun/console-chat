@@ -47,7 +47,7 @@ client.on('data',data => {
         imageStream.write(bfInnerData);
         imageStream.end();
         setTimeout(function() {
-           imaging.draw('temp/any', { width: 15}, function (resp, status) {
+           imaging.draw('temp/any', { width:process.stdout.rows,char:'★' }, function (resp, status) {
              process.stdout.write(resp);
             });
         }, 100);
