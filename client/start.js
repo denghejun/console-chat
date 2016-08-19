@@ -28,7 +28,8 @@ client.on('data',data => {
   if(chunks.length == bfLength + 30 + 6 + 4)
   {
    const bfInnerData = chunks.slice(40, chunks.length);
-   const bfSenderPrefix = Buffer.from('@'+sender + ' said>>');
+   var isSelf = (client.address()['address'] + ':' +client.address()['port'].toString()).trim() === sender;
+   const bfSenderPrefix =isSelf?Buffer.from('@You said>>') : Buffer.from('@'+sender + ' said>>');
    const bfEnding = Buffer.from('\r\n');
    switch(bfType)
    {
@@ -47,7 +48,7 @@ client.on('data',data => {
         imageStream.write(bfInnerData);
         imageStream.end();
         setTimeout(function() {
-           imaging.draw('temp/any', { width:process.stdout.rows,char:'★' }, function (resp, status) {
+           imaging.draw('temp/any', {char:'▇' }, function (resp, status) {
              process.stdout.write(resp);
             });
         }, 100);
