@@ -9,13 +9,89 @@ let chunks;
 let bfType;
 let bfLength;
 let sender;
+let client;
 
-const client = net.createConnection(SERVER_PORT,SERVER_HOST).setNoDelay(true);
-client.on('connect',() => {
-    process.stdout.write('connect server successfully, you can chat NOW!\n'.green);
+
+process.stdin.setEncoding('utf8');
+process.stdin.on('readable', () => {
+    let chunk = process.stdin.read();
+    if(!client)
+    {
+      client = createClient(clientCreatedHandler,clientCreatedErrorHandler,receiveMessageHandler);
+    }
+    else if(client.destroyed)
+    {
+      client = createClient(()=>{
+          sendMessage(chunk);
+      },clientCreatedErrorHandler,receiveMessageHandler);
+    }
+    else
+    {
+        sendMessage(chunk);
+    }
 });
 
-client.on('data',data => {
+
+var sendMessage = chunk => {
+ if (chunk !== null && chunk!=='\n' && chunk!=='\r\n') 
+    {
+      chunk = chunk.toString().replace(/\r\n/g,'').replace(/"/g,'');
+      fs.exists(chunk, (exists) => {
+        const sender = Buffer.alloc(30, leftPad(client.address()['address'] + ':' +client.address()['port'].toString(),30,''));
+        if(exists)
+        {
+              fs.readFile(chunk, (err, data) => {
+                  if (err) throw err;
+
+                  const bfType = Buffer.alloc(6,leftPad('image',6,''));
+                  const bfValue = Buffer.from(data.buffer);
+                  const bfLength = Buffer.alloc(4,0);
+                  bfLength.writeUInt32BE(bfValue.length);
+                  client.write(Buffer.concat([sender,bfType,bfLength,bfValue]));
+               });
+        }
+        else
+        {
+            const bfType = Buffer.alloc(6,leftPad('text',6,''));
+            const bfValue = Buffer.from(chunk);
+            const bfLength = Buffer.alloc(4,0);
+            bfLength.writeUInt32BE(bfValue.length);
+            client.write(Buffer.concat([sender,bfType,bfLength,bfValue]));
+        }
+    });
+
+    process.stdout.moveCursor(0,-1); 
+    process.stdout.clearLine();
+    process.stdout.cursorTo(0);  
+  }
+};
+
+var createClient = (createdCallback,errorCallback,receiveMessageCallback)=>{
+  const client = net.createConnection(SERVER_PORT,SERVER_HOST).setNoDelay(true);
+  client.on('connect',createdCallback);
+  client.on('error',errorCallback);
+  client.on('data',receiveMessageCallback);
+  return client;
+};
+
+
+var clientCreatedHandler = ()=>{
+  process.stdout.write('connect server successfully, you can chat NOW!\n'.green);
+};
+
+var clientCreatedErrorHandler = err => {
+  switch(err.code)
+  {
+    case 'ECONNRESET':
+      process.stdout.write('the chat server is resetting, please try later.\n');
+      break;
+    case 'ECONNREFUSED':
+      process.stdout.write('the chat server was down, please try later.\n');
+    default:break;
+  }
+};
+
+var receiveMessageHandler = data => {
   const dataBuffer =Buffer.from(data.buffer);
   chunks =chunks ? Buffer.concat([chunks, dataBuffer]) : dataBuffer;
   if(!bfType && !bfLength && !sender)
@@ -66,61 +142,7 @@ client.on('data',data => {
    bfLength = undefined;
    sender = undefined;
   }
-});   
-
-client.on('error',err => {
-  switch(err.code)
-  {
-    case 'ECONNRESET':
-      process.stdout.write('the chat server is resetting, please try later.\n');
-      break;
-    case 'ECONNREFUSED':
-      process.stdout.write('the chat server was down, please try later.\n');
-    default:break;
-  }
-});
-
-process.stdin.setEncoding('utf8');
-process.stdin.on('readable', () => {
-    let chunk = process.stdin.read();
-    if (chunk !== null&&chunk!=='\n'&&chunk!=='\r\n') 
-    {
-      chunk = chunk.toString().replace(/\r\n/g,'').replace(/"/g,'');
-      if(client.destroyed)
-      {
-        client.connect({port:SERVER_PORT, host:SERVER_HOST});
-      }
-
-      fs.exists(chunk, (exists) => {
-        const sender = Buffer.alloc(30, leftPad(client.address()['address'] + ':' +client.address()['port'].toString(),30,''));
-        if(exists)
-        {
-              fs.readFile(chunk, (err, data) => {
-                  if (err) throw err;
-
-                  const bfType = Buffer.alloc(6,leftPad('image',6,''));
-                  const bfValue = Buffer.from(data.buffer);
-                  const bfLength = Buffer.alloc(4,0);
-                  bfLength.writeUInt32BE(bfValue.length);
-                  client.write(Buffer.concat([sender,bfType,bfLength,bfValue]));
-               });
-        }
-        else
-        {
-            const bfType = Buffer.alloc(6,leftPad('text',6,''));
-            const bfValue = Buffer.from(chunk);
-            const bfLength = Buffer.alloc(4,0);
-            bfLength.writeUInt32BE(bfValue.length);
-            client.write(Buffer.concat([sender,bfType,bfLength,bfValue]));
-        }
-    });
-
-    process.stdout.moveCursor(0,-1); 
-    process.stdout.clearLine();
-    process.stdout.cursorTo(0);  
-  }
-});
-
+};
 
 
 
