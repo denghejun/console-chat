@@ -5,41 +5,22 @@ process.on('uncaughtException',err => {
 process.on('message',(message,handle) => {
     switch(message.type)
     {
-        case 'start':
-            handle.on('connection', socket => {
-                context.add_client(socket);
-                socket.on('data', data => {
-                    console.log('image');
+        case 'MSG_CONN':
+                context.add_client(handle);
+                handle.on('data', data => {
                     context.send_each_clients(data);
                 });
 
-                socket.on('end',() => {
-                    context.remove_client(socket);
-                    process.send({type:'client_disconnect',socket:`${socket.remoteAddress}:${socket.remotePort}`});
+                handle.on('end',() => {
+                    context.remove_client(handle);
                 });
 
-                socket.on('error',err => {
-                    context.remove_client(socket);
-                    process.send({type:'client_disconnect',socket:`${socket.remoteAddress}:${socket.remotePort}`});
+                handle.on('error',err => {
+                    context.remove_client(handle);
                     });
-
-                process.send({type:'client_connect'}, socket,{keepOpen:true});
-                });
+                    
+        break;
         
-            handle.on('error', err => {
-                process.stdout.write(err.message);
-            });
-
-        break;
-
-        case 'client_connect':
-            context.add_client(handle);
-        break;
-
-        case 'client_disconnect':
-            context.remove_client_byKey(message.socket);
-        break;     
-
         default:
         break;   
     }

@@ -105,7 +105,7 @@ exports.processor = {
                                 case 'ECONNREFUSED':
                                 process.stdout.write('the chat server was down, please try later.\n');
                                 default:
-                                process.stdout.write(err.message + '\n');
+                                // process.stdout.write(err.message + '\n');
                                 break;
                             }
                         }
